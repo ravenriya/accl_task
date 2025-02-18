@@ -15,8 +15,26 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
+
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(nav2_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(rclcpp_action REQUIRED)
+
+add_executable(navigation_node src/navigation_node.cpp)
+ament_target_dependencies(navigation_node
+  rclcpp
+  geometry_msgs
+  nav2_msgs
+  visualization_msgs
+  rclcpp_action
+)
+
+install(TARGETS
+  navigation_node
+  DESTINATION lib/${PROJECT_NAME}
+)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
