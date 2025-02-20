@@ -31,8 +31,18 @@ ament_target_dependencies(navigation_node
   rclcpp_action
 )
 
+add_executable(multi_node src/navmul.cpp)
+ament_target_dependencies(multi_node
+  rclcpp
+  geometry_msgs
+  nav2_msgs
+  visualization_msgs
+  rclcpp_action
+)
+
 install(TARGETS
   navigation_node
+  multi_node
   DESTINATION lib/${PROJECT_NAME}
 )
 # uncomment the following section in order to fill in
