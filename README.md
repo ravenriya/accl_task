@@ -38,20 +38,24 @@ The specialized navigation implementation includes:
 - Optimized obstacle avoidance
 - Real-time path optimization
 
-### 2. Simulation Environment
+### 2.Multi-node navigation
+Multiple goals can be traversed simultaneously:
+- Navigates through multiple points autonomously
+
+### 3. Simulation Environment
 Fully integrated Gazebo simulation with:
 - Warehouse environment
 - Simulated sensors
 - Performance monitoring
 - Debug visualization
 
-### 3. Localization System
+### 4. Localization System
 Map-based positioning system using:
 - AMCL localization
 - Custom map integration
 - Real-time position tracking
 
-### 3. Navigation System using Nav2
+### 5. Navigation System using Nav2
 Map-based navigation system using:
 - AMCL localization
 - Map integration
@@ -59,13 +63,19 @@ Map-based navigation system using:
 
 ## Running the Complete System
 
-### 1. Start the Zenoh Daemon (if using Zenoh)
+### 1. Start the Zenoh Router (if using Zenoh)
+
 ```bash
 ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
 ### 2. Launch Core System
+
 ```bash
+# Build specific packages
+colcon build --packages-select accl_task or colcon build --symlink-install
+source install/setup.bash #in every terminal inside dev_ws
+
 # Terminal 1: Launch simulation and robot
 ros2 launch accl_task launch_sim.launch.py
 
@@ -75,8 +85,11 @@ ros2 launch accl_task localization_launch.py map:=./src/accl_task/maps/warehouse
 # Terminal 3: Launch custom navigation
 ros2 launch my_bot navigation_launch.py use_sim_time:=false map_subscribe_transient_local:=true
 
-# Terminal 4: Run custom navigation node
+# Terminal 4: Run custom single point navigation node
 ros2 run accl_task navigation_node
+# or
+#Terminal 5: Run multipoint navigation node
+ros2 run accl_task multi_node
 ```
 ## Launch Files and Navigation Node Explained
 
@@ -104,6 +117,10 @@ Starts navigation stack:
 - Interfaces with running AMCL node and sets initial pose
 - Interfaces with Running Nav2 nodes and gives coordinates for the robot to traverse through
 - Adds visual markers after reaching a goal
+  
+### navmul.cpp
+-Multiple goals can be assigned at once and are achieved sequentially 
+
 
 ## Configuration Files
 
