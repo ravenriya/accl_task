@@ -1,168 +1,162 @@
-# ROS 2 Navigation Node with Checkpoint Visualization
+# Custom robot with Nav2
 
-This ROS 2 package implements a navigation node that allows for goal-point navigation with visual checkpoint markers in RViz. The node enables users to input target coordinates, navigate to them, and visualizes both reached goals and predefined checkpoints.
+A ROS 2 based robot featuring custom navigation nodes and optimized parameters for autonomous operation done using Zenoh middleware, can also be simulated using cycloneDDS, PLEASE NOTE THAT fastDDS makes the gazebo environment crash
 
-## Features
-
-- Interactive goal-point navigation through command-line input
-- Visual markers for reached goals (green spheres)
-- Special checkpoint markers with labels (blue cylinders)
-- Real-time distance feedback during navigation
-- Predefined checkpoint positions with custom names
-- Automatic initial pose setting
 
 ## Prerequisites
 
-- ROS 2 Humble or newer
-- Nav2 stack installed
-- C++ 14 or newer
+### System Requirements
+- Ubuntu 22.04 LTS
+- ROS 2 Humble
+- Gazebo Ignition Fortress
 - RViz2
+- Python 3.10+
+- C++ 14 or newer
 
-## Dependencies
-
-```xml
-<depend>rclcpp</depend>
-<depend>rclcpp_action</depend>
-<depend>geometry_msgs</depend>
-<depend>nav2_msgs</depend>
-<depend>visualization_msgs</depend>
-```
-
-## Installation
-
-1. Create a new ROS 2 workspace (if you don't have one):
+### Required Packages
 ```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
+# Install core dependencies
+sudo apt update
+sudo apt install -y \
+    ros-humble-navigation2 \
+    ros-humble-nav2-bringup \
+    ros-humble-slam-toolbox \
+    ros-humble-controller-manager \
+    ros-humble-ros2-control \
+    ros-humble-ros2-controllers \
 ```
+# Install Gazebo Ignition-Fortress
+sudo apt-get install ignition-fortress
 
-2. Clone this repository:
+
+## System Components
+
+### 1. Custom Navigation Node
+The specialized navigation implementation includes:
+- Enhanced path planning algorithms
+- Custom cost functions
+- Optimized obstacle avoidance
+- Real-time path optimization
+
+### 2. Simulation Environment
+Fully integrated Gazebo simulation with:
+- Warehouse environment
+- Simulated sensors
+- Performance monitoring
+- Debug visualization
+
+### 3. Localization System
+Map-based positioning system using:
+- AMCL localization
+- Custom map integration
+- Real-time position tracking
+
+### 3. Navigation System using Nav2
+Map-based navigation system using:
+- AMCL localization
+- Map integration
+- Real-time dynamic obstacle avoidance
+
+## Running the Complete System
+
+### 1. Start the Zenoh Daemon (if using Zenoh)
 ```bash
-git clone <your-repository-url>
+ros2 run rmw_zenoh_cpp rmw_zenohd
 ```
 
-3. Install dependencies:
+### 2. Launch Core System
 ```bash
-cd ~/ros2_ws
-rosdep install --from-paths src --ignore-src -r -y
-```
+# Terminal 1: Launch simulation and robot
+ros2 launch accl_task launch_sim.launch.py
 
-4. Build the workspace:
+# Terminal 2: Launch localization
+ros2 launch accl_task localization_launch.py map:=./src/accl_task/maps/warehouse_save.yaml use_sim_time:=true
+
+# Terminal 3: Launch custom navigation
+ros2 launch my_bot navigation_launch.py use_sim_time:=false map_subscribe_transient_local:=true
+
+# Terminal 4: Run custom navigation node
+ros2 run accl_task navigation_node
+```
+## Launch Files and Navigation Node Explained
+
+### launch_sim.launch.py
+Launches simulation components:
+- Gazebo environment
+- Robot spawning
+- Sensor simulation
+- Basic parameters
+
+### localization_launch.py
+Initiates localization:
+- Map loading
+- AMCL setup
+- Transform configuration
+
+### navigation_launch.py
+Starts navigation stack:
+- Custom navigation node
+- Parameter loading
+- Path planning
+- Obstacle avoidance
+
+### navigation_node.cpp
+- Interfaces with running AMCL node and sets initial pose
+- Interfaces with Running Nav2 nodes and gives coordinates for the robot to traverse through
+- Adds visual markers after reaching a goal
+
+## Configuration Files
+
+### nav_params.yaml
+Optimized Configuration
+The optimized configuration uses MPPI controller (nav2_mppi_controller::MPPIController), whereas the default uses the DWB controller (dwb_core::DWBLocalPlanner). The MPPI controller implements Model Predictive Path Integral control, which provides more advanced trajectory planning and obstacle avoidance capabilities.
+The optimized configuration includes both precise_goal_checker and general_goal_checker, while the default only has general_goal_checker. The precise goal checker has tighter tolerances (0.1m for both position and orientation) compared to the default's 0.25m tolerances, allowing for more accurate positioning at the destination.
+MPPI Controller Specific Parameters
+The optimized configuration includes numerous MPPI-specific parameters that significantly enhance navigation performance:
+
+Time steps of 56 and model time step of 0.05 seconds for trajectory prediction
+Large batch size of 2000 for thorough trajectory evaluation
+Appropriate noise parameters for trajectory sampling
+Higher maximum velocity (0.5 m/s compared to default 0.26 m/s)
+Well-tuned acceleration limits for smoother motion
+Optimization parameters like temperature (0.3) and gamma (0.015)
+Specialized critics including ConstraintCritic, CostCritic, GoalCritic, GoalAngleCritic, PathAlignCritic, PathFollowCritic, PathAngleCritic, and PreferForwardCritic
+High collision cost (1,000,000) for safer navigation
+
+Planner Server
+A key difference in the optimized configuration is enabling A* algorithm for path planning (use_astar: true), whereas the default uses Dijkstra's algorithm (use_astar: false). A* can provide more efficient path planning in complex environments by using heuristics to guide the search, potentially resulting in faster path computation and better routes.
+
+Key Advantages of the Optimized Configuration
+More intelligent path planning with A* algorithm, which can find optimal paths more efficiently than Dijkstra's algorithm in complex environments
+Advanced controller implementation using MPPI, which provides better handling of dynamic obstacles, more sophisticated trajectory generation, and smoother motion planning through its predictive capabilities
+Higher performance capabilities with faster maximum velocity (0.5 m/s vs 0.26 m/s) and better acceleration handling
+More precise final positioning with tighter goal tolerances and balanced approach behavior
+Enhanced path following behavior with specialized critics that maintain a better balance between staying on the planned path and adapting to environmental changes
+Improved safety through higher collision costs and more sophisticated obstacle avoidance through the predictive capabilities of MPPI
+Better computational efficiency through batch processing for trajectory evaluation, appropriate pruning distance, and efficient update parameters
+Fine tuned to match environmental constraints and robot capabilities
+
+## Development Tools
+
+### Building and Testing
 ```bash
-colcon build --symlink-install
-```
-
-5. Source the workspace:
-```bash
-source ~/ros2_ws/install/setup.bash
-```
-
-## Usage
-
-1. Launch your robot's navigation stack (example with Turtlebot3):
-```bash
-ros2 launch turtlebot3_navigation2 navigation2.launch.py
-```
-
-2. In a new terminal, source your workspace and run the navigation node:
-```bash
-source ~/ros2_ws/install/setup.bash
-ros2 run your_package_name navigation_node
-```
-
-3. Open RViz2 (if not already running):
-```bash
-rviz2
-```
-
-4. In RViz2:
-   - Add a Marker display type
-   - Set the fixed frame to "map"
-   - Set the Marker topic to "/visualization_marker"
-
-5. In the terminal running the navigation node:
-   - Enter X coordinate when prompted
-   - Enter Y coordinate when prompted
-   - The robot will navigate to the specified position
-
-## Customizing Checkpoints
-
-To modify the checkpoint positions and names, edit the `checkpoints` vector in the `NavigationNode` class:
-
-```cpp
-std::vector<Checkpoint> checkpoints = {
-    {1.0, 1.0, "Checkpoint 1"},
-    {2.0, 2.0, "Checkpoint 2"},
-    {0.0, 0.0, "Home"}
-};
-```
-
-## Marker Visualization
-
-- **Goal Markers**: Green spheres that appear when any goal is reached
-- **Checkpoint Markers**: Blue cylinders with text labels that appear when predefined checkpoints are reached
-- Markers remain visible for 5 seconds by default (can be modified in the code)
-
-## Node Details
-
-- **Node Name**: navigation_node
-- **Published Topics**:
-  - `/initialpose` (geometry_msgs/msg/PoseWithCovarianceStamped)
-  - `/visualization_marker` (visualization_msgs/msg/Marker)
-- **Action Client**:
-  - `navigate_to_pose` (nav2_msgs/action/NavigateToPose)
-
-## Configuration
-
-You can modify the following parameters in the code:
-
-- Marker display duration (default: 5 seconds)
-- Marker sizes and colors
-- Checkpoint positions and names
-- Initial pose settings
-- Checkpoint detection threshold (default: 0.1 meters)
-
-## Building and Testing
-
-```bash
-# Build the package
-cd ~/ros2_ws
-colcon build --packages-select your_package_name
-
-# Run tests (if implemented)
-colcon test --packages-select your_package_name
-```
+# Build specific packages
+colcon build --packages-select accl_task or colcon build --symlink-install
 
 ## Common Issues and Solutions
 
-1. **Navigation Server Not Found**
-   - Ensure your navigation stack is running
-   - Check that all ROS 2 dependencies are installed
-   - Verify that your workspace is properly sourced
+### Navigation Issues
+1. **Map Not Loading**
+   - Verify map path
+   - Check file permissions
+   - Confirm YAML format
 
-2. **Markers Not Visible in RViz**
-   - Confirm that the Marker display type is added in RViz
-   - Verify the correct topic is selected ("/visualization_marker")
-   - Check that the fixed frame is set to "map"
+2. **Navigation Failures**
+   - Check transform tree
+   - Verify localization
+   - Review costmap parameters
 
-3. **Initial Pose Issues**
-   - Ensure the map is properly loaded
-   - Verify that the initial pose coordinates match your map
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- ROS 2 Navigation Stack Documentation
-- ROS 2 Community
-- Nav2 Project Team
+3. **Simulation Issues**
+   - Confirm use_sim_time settings
+   - Check Gazebo launch
+   - Verify sensor data
