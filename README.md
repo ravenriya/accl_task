@@ -73,6 +73,7 @@ ros2 run rmw_zenoh_cpp rmw_zenohd
 
 ```bash
 # Build specific packages
+cd ~/dev_ws or cd ros2_ws
 colcon build --packages-select accl_task or colcon build --symlink-install
 source install/setup.bash #in every terminal inside dev_ws
 
